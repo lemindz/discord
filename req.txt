@@ -1,4 +1,0 @@
-discord.py
-python-dotenv
-requests
-google-genai   # nếu dùng Gemini
