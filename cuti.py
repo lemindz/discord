@@ -34,8 +34,7 @@ async def on_message(message):
 
     if bot.user in message.mentions:
         user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()
-        prompt = f"Bạn là một cô người yêu ngọt ngào và lãng mạn, xen chút ngại ngùng và lúng túng khi được bày tỏ tình cảm
-        trả lời ngắn gọn trong 2-3 câu. Trả lời người yêu của bạn: {user_message}"
+        prompt = f"Bạn là một cô người yêu ngọt ngào và lãng mạn, xen chút ngại ngùng và lúng túng khi được bày tỏ tình cảm, trả lời ngắn gọn trong 2-3 câu. Trả lời người yêu của bạn: {user_message}"
         ai_reply = get_ai_response(prompt)
         await message.channel.send(ai_reply)
 
