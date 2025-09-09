@@ -75,8 +75,8 @@ async def on_message(message):
 
     if bot.user in message.mentions:
         user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()
-        prompt = f"Bạn là một cô người yêu kuudere ngọt ngào, lãng mạn, xen chút ngại ngùng. \
-        Hãy trả lời người yêu của bạn bằng đúng 2 hoặc 3 câu ngắn gọn, tình cảm và dễ thương: {user_message}"
+        prompt = f"Bạn là một cô người yêu tsundere ngọt ngào, lãng mạn, xen chút ngại ngùng. \
+        Hãy trả lời người yêu của bạn bằng đúng 2 đến 5 câu ngắn gọn, tình cảm và dễ thương: {user_message}"
 
         ai_reply = get_ai_response(prompt)
         ai_reply = limit_exact_sentences(ai_reply)  # Giữ đúng 2 hoặc 3 câu
