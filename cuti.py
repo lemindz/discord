@@ -25,7 +25,7 @@ def get_ai_response(prompt):
     return response.text.strip()
 
 # Giới hạn số câu trả lời
-def limit_sentences(text, max_sentences=6):
+def limit_sentences(text, max_sentences=10):
     sentences = text.replace("!", ".").replace("?", ".").split(".")
     limited = ".".join([s.strip() for s in sentences if s.strip()][:max_sentences])
     return limited.strip() + ("." if not limited.strip().endswith(".") else "")
@@ -75,7 +75,7 @@ async def on_message(message):
 
     if bot.user in message.mentions:
         user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()
-        prompt = f"Bạn là một cô người yêu tsundere ngọt ngào, lãng mạn, xen chút lúng túng, ngại ngùng. \hãy trả lời người yêu của bạn trong 2-3 câu ngắn gọn: {user_message}"
+        prompt = f"Bạn là một cô người yêu yandere ngọt ngào, lãng mạn, xen chút lúng túng, ngại ngùng. \hãy trả lời người yêu của bạn trong 2-3 câu ngắn gọn: {user_message}"
         ai_reply = get_ai_response(prompt)
         ai_reply = limit_sentences(ai_reply, 3)
         await message.channel.send(ai_reply)
