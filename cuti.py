@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 import os
 import random
+import time
+import asyncio
 from google import genai
 from dotenv import load_dotenv
 
@@ -18,6 +20,11 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # Biến lưu kênh chat (None = mọi kênh)
 chat_channel_id = None
 
+# Cooldown + lock
+last_reply_time = 0
+cooldown_seconds = 5
+processing_lock = asyncio.Lock()
+
 # Hàm gọi API Gemini
 def get_ai_response(prompt):
     response = client.models.generate_content(
@@ -25,13 +32,22 @@ def get_ai_response(prompt):
     )
     return response.text.strip()
 
-# Giới hạn chính xác 2 hoặc 3 câu
+# Giới hạn chính xác 2 hoặc 3 câu (random)
 def limit_exact_sentences(text):
-    target_sentences = random.choice([2, 5])  # random 2 hoặc 3 câu
+    target_sentences = random.choice([4, 6])
     sentences = text.replace("!", ".").replace("?", ".").split(".")
     sentences = [s.strip() for s in sentences if s.strip()]
     limited = ".".join(sentences[:target_sentences])
     return limited.strip() + ("." if not limited.strip().endswith(".") else "")
+
+# Safe reply (có cooldown)
+async def safe_reply(message, ai_reply):
+    global last_reply_time
+    now = time.time()
+    if now - last_reply_time < cooldown_seconds:
+        return  # bỏ qua nếu chưa hết cooldown
+    last_reply_time = now
+    await message.channel.send(ai_reply)
 
 # Sự kiện khi bot sẵn sàng
 @bot.event
@@ -70,17 +86,21 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
+    # Nếu đã set channel → chỉ trả lời ở channel đó
     if chat_channel_id and message.channel.id != chat_channel_id:
         return
 
     if bot.user in message.mentions:
         user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()
-        prompt = f"Bạn là một cô người yêu tsundere ngọt ngào, lãng mạn, xen chút ngại ngùng. \
-        Hãy trả lời người yêu của bạn bằng đúng 2 đến 5 câu ngắn gọn, tình cảm và dễ thương: {user_message}"
+        user_message = user_message[:300]  # giới hạn 300 ký tự
 
-        ai_reply = get_ai_response(prompt)
-        ai_reply = limit_exact_sentences(ai_reply)  # Giữ đúng 2 hoặc 3 câu
-        await message.channel.send(ai_reply)
+        async with processing_lock:  # chỉ xử lý 1 request 1 lúc
+            prompt = f"Bạn là một cô người yêu ngọt ngào, lãng mạn, xen chút ngại ngùng. \
+            Hãy trả lời người yêu của bạn bằng đúng 4 hoặc 6 câu ngắn gọn, tình cảm và dễ thương: {user_message}"
+
+            ai_reply = get_ai_response(prompt)
+            ai_reply = limit_exact_sentences(ai_reply)
+            await safe_reply(message, ai_reply)
 
     await bot.process_commands(message)
 
