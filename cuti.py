@@ -27,7 +27,7 @@ def get_ai_response(prompt):
 
 # Giới hạn chính xác 2 hoặc 3 câu
 def limit_exact_sentences(text):
-    target_sentences = random.choice([2, 3])  # random 2 hoặc 3 câu
+    target_sentences = random.choice([2, 5])  # random 2 hoặc 3 câu
     sentences = text.replace("!", ".").replace("?", ".").split(".")
     sentences = [s.strip() for s in sentences if s.strip()]
     limited = ".".join(sentences[:target_sentences])
