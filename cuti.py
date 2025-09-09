@@ -25,7 +25,7 @@ def get_ai_response(prompt):
     return response.text.strip()
 
 # Giới hạn số câu trả lời
-def limit_sentences(text, max_sentences=3):
+def limit_sentences(text, max_sentences=6):
     sentences = text.replace("!", ".").replace("?", ".").split(".")
     limited = ".".join([s.strip() for s in sentences if s.strip()][:max_sentences])
     return limited.strip() + ("." if not limited.strip().endswith(".") else "")
