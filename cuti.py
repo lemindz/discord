@@ -37,19 +37,24 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # =====================
-# GEMINI CLIENT
+# GEMINI CLIENT (async)
 # =====================
 client = genai.Client(api_key=GEMINI_KEY)
 
-# Config chat
 chat_channel_id = None
 last_reply_time = 0
 cooldown_seconds = 5
 processing_lock = asyncio.Lock()
 
-def get_ai_response(prompt: str) -> str:
-    response = client.models.generate_content(
-        model="gemini-2.5-flash", contents=prompt
+async def get_ai_response(prompt: str) -> str:
+    """Gọi Gemini API trong thread pool để không block asyncio loop"""
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
     )
     return response.text.strip()
 
@@ -298,7 +303,7 @@ async def on_message(message):
         async with processing_lock:
             prompt = f"Bạn là một cô người yêu tên min - ngọt ngào, lãng mạn, xen chút ngại ngùng. \
             Hãy trả lời người yêu của bạn bằng đúng 4 hoặc 6 câu ngắn gọn, tình cảm và dễ thương: {user_message}"
-            ai_reply = get_ai_response(prompt)
+            ai_reply = await get_ai_response(prompt)
             ai_reply = limit_exact_sentences(ai_reply)
             await safe_reply(message, ai_reply)
     await bot.process_commands(message)
@@ -310,7 +315,7 @@ async def on_message(message):
 async def on_ready():
     print(f"✅ Bot online: {bot.user}")
     try:
-        cmds = await bot.tree.sync()  # global
+        cmds = await bot.tree.sync()
         print(f"🌍 Synced {len(cmds)} global command(s)")
     except Exception as e:
         print("⚠️ Sync error:", e)
