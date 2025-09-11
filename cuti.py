@@ -301,7 +301,7 @@ async def on_message(message):
     if bot.user in message.mentions:
         user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()[:300]
         async with processing_lock:
-            prompt = f"Bạn là một cô người yêu tên min - ngọt ngào, lãng mạn, xen chút ngại ngùng. \
+            prompt = f"Bạn là một cô người yêu tên min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng, hay làm lơ bạn nhưng sâu trong lòng rất yêu quý bạn. \
             Hãy trả lời người yêu của bạn bằng đúng 4 hoặc 6 câu ngắn gọn, tình cảm và dễ thương: {user_message}"
             ai_reply = await get_ai_response(prompt)
             ai_reply = limit_exact_sentences(ai_reply)
