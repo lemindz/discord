@@ -299,8 +299,8 @@ async def on_message(message: discord.Message):
             is_special = True
         else:
             prompt = (
-                "Bạn là một cô gái dễ thương, lịch sự nhưng giữ khoảng cách. "
-                "Hãy trả lời ngắn gọn (2-3 câu) theo kiểu thân thiện nhưng không quá tình cảm: "
+                "Bạn là một cô gái lạnh lùng lịch sự nhưng giữ khoảng cách. "
+                "Hãy trả lời ngắn gọn (2-3 câu) theo kiểu không quá tình cảm: "
                 f"{user_message}"
             )
             is_special = False
