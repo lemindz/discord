@@ -1,13 +1,14 @@
 import os
 import json
 import random
+import re
 import time
 import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
 from discord.ui import View, Button
-from google import genai
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 # =====================
@@ -28,6 +29,15 @@ TICKET_CATEGORY_ID = int(os.getenv("TICKET_CATEGORY_ID", 0))
 SUPPORT_ROLE_ID = int(os.getenv("SUPPORT_ROLE_ID", 0))
 
 # =====================
+# GEMINI CONFIG
+# =====================
+genai.configure(api_key=GEMINI_KEY)
+
+# ID user đặc biệt
+SPECIAL_USER_ID = 695215402187489350
+lover_nickname = "Anh Minh"
+
+# =====================
 # BOT SETUP
 # =====================
 intents = discord.Intents.default()
@@ -36,42 +46,34 @@ intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# =====================
-# GEMINI CLIENT (async)
-# =====================
-client = genai.Client(api_key=GEMINI_KEY)
-
 chat_channel_id = None
 last_reply_time = 0
 cooldown_seconds = 5
 processing_lock = asyncio.Lock()
 
+# =====================
+# GEMINI FUNCTIONS
+# =====================
 async def get_ai_response(prompt: str) -> str:
-    """Gọi Gemini API trong thread pool để không block asyncio loop"""
-    loop = asyncio.get_event_loop()
-    response = await loop.run_in_executor(
-        None,
-        lambda: client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
+    try:
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: genai.GenerativeModel("gemini-1.5-flash").generate_content(prompt)
         )
-    )
-    return response.text.strip()
+        return response.text.strip()
+    except Exception as e:
+        print("❌ Gemini error:", e)
+        return "Em bị trục trặc một chút... nhắn lại cho em sau nha 💕"
 
-def limit_exact_sentences(text: str) -> str:
-    target_sentences = random.choice([4, 6])
-    sentences = text.replace("!", ".").replace("?", ".").split(".")
-    sentences = [s.strip() for s in sentences if s.strip()]
-    limited = ".".join(sentences[:target_sentences])
-    return limited.strip() + ("." if not limited.strip().endswith(".") else "")
+def split_sentences(text: str):
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    return [s.strip() for s in sentences if s.strip()]
 
-async def safe_reply(message, ai_reply):
-    global last_reply_time
-    now = time.time()
-    if now - last_reply_time < cooldown_seconds:
-        return
-    last_reply_time = now
-    await message.channel.send(ai_reply)
+def limit_exact_sentences(text: str, is_special_user: bool = False):
+    sentences = split_sentences(text)
+    target_count = random.choice([4, 6]) if is_special_user else random.choice([2, 3])
+    return " ".join(sentences[:target_count]) if len(sentences) >= target_count else " ".join(sentences)
 
 # =====================
 # SAVE / LOAD WAR DATA
@@ -263,7 +265,55 @@ async def ticketpanel(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, view=view)
 
 # =====================
-# CHATBOT SLASH COMMANDS
+# CHATBOT SPECIAL USER
+# =====================
+@bot.tree.command(name="setlovername", description="Đổi nickname đặc biệt cho người yêu 💕")
+async def set_lover_name(interaction: discord.Interaction, name: str):
+    global lover_nickname
+    if interaction.user.id == SPECIAL_USER_ID:
+        lover_nickname = name
+        await interaction.response.send_message(f"Đã đổi nickname thành: **{lover_nickname}** 💖", ephemeral=True)
+    else:
+        await interaction.response.send_message("Bạn không có quyền đổi nickname này!", ephemeral=True)
+
+@bot.event
+async def on_message(message: discord.Message):
+    global lover_nickname
+    if message.author.bot:
+        return
+
+    if bot.user in message.mentions:
+        if chat_channel_id and message.channel.id != chat_channel_id:
+            return
+
+        user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()[:300]
+
+        if message.author.id == SPECIAL_USER_ID:
+            prompt = (
+                f"Bạn là một cô người yêu tên Min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng, "
+                f"chỉ yêu duy nhất {lover_nickname}, hay làm lơ {lover_nickname} nhưng trong lòng rất yêu quý. "
+                f"Hãy trả lời giống trong truyện romcom, xưng hô với {lover_nickname}, "
+                "và trả lời bằng đúng 4 hoặc 6 câu ngắn gọn, tình cảm và dễ thương: "
+                f"{user_message}"
+            )
+            is_special = True
+        else:
+            prompt = (
+                "Bạn là một cô gái dễ thương, lịch sự nhưng giữ khoảng cách. "
+                "Hãy trả lời ngắn gọn (2-3 câu) theo kiểu thân thiện nhưng không quá tình cảm: "
+                f"{user_message}"
+            )
+            is_special = False
+
+        async with processing_lock:
+            ai_reply = await get_ai_response(prompt)
+            ai_reply = limit_exact_sentences(ai_reply, is_special)
+            await message.channel.send(ai_reply)
+
+    await bot.process_commands(message)
+
+# =====================
+# CHANNEL CONTROL
 # =====================
 @bot.tree.command(name="setchannel", description="Chọn kênh để bot chat khi được tag")
 async def setchannel(interaction: discord.Interaction, channel: discord.TextChannel):
@@ -289,78 +339,16 @@ async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("🏓 Pong!", ephemeral=True)
 
 # =====================
-# ON MESSAGE (CHATBOT)
+# ON READY
 # =====================
-
-# ID user đặc biệt
-SPECIAL_USER_ID = 695215402187489350
-lover_nickname = "Anh minh"
-
-# 
-# Hàm tách câu
-def split_sentences(text: str):
-    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-    return [s.strip() for s in sentences if s.strip()]
-
-# Slash command đổi nickname
-@bot.tree.command(name="setlovername", description="Đổi nickname đặc biệt cho người yêu 💕")
-async def set_lover_name(interaction: discord.Interaction, name: str):
-    global lover_nickname
-    if interaction.user.id == SPECIAL_USER_ID:
-        lover_nickname = name
-        await interaction.response.send_message(f"Đã đổi nickname thành: **{lover_nickname}** 💖", ephemeral=True)
-    else:
-        await interaction.response.send_message("Bạn không có quyền đổi nickname này!", ephemeral=True)
-
-# Xử lý mention
-@bot.event
-async def on_message(message):
-    global lover_nickname
-    if message.author == bot.user:
-        return
-
-    if bot.user in message.mentions:
-        user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()[:300]
-        if message.author.id == SPECIAL_USER_ID:
-            prompt = (
-                f"Bạn là một cô người yêu tên Min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng, "
-                f"chỉ yêu duy nhất {lover_nickname}, hay làm lơ {lover_nickname} nhưng trong lòng rất yêu quý. "
-                f"Hãy trả lời giống trong truyện romcom, xưng hô với {lover_nickname}, "
-                "và trả lời bằng đúng 4 hoặc 6 câu ngắn gọn, tình cảm và dễ thương: "
-                f"{user_message}"
-            )
-            is_special = True
-        else:
-            prompt = (
-                "Bạn là một cô gái dễ thương, lịch sự nhưng giữ khoảng cách. "
-                "Hãy trả lời ngắn gọn (2-3 câu) theo kiểu thân thiện nhưng không quá tình cảm: "
-                f"{user_message}"
-            )
-            is_special = False
-
-        ai_reply = await get_ai_response(prompt)
-        ai_reply = limit_exact_sentences(ai_reply, is_special)
-        await message.channel.send(ai_reply)
-
-    await bot.process_commands(message)
-
-# Sync lệnh slash
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-    print(f"✅ Bot đã đăng nhập: {bot.user}")
-    
+    print(f"✅ Bot đã đăng nhập thành công: {bot.user}")
 
 # =====================
-# READY EVENT
+# RUN BOT
 # =====================
-@bot.event
-async def on_ready():
-    print(f"✅ Bot online: {bot.user}")
-    try:
-        cmds = await bot.tree.sync()
-        print(f"🌍 Synced {len(cmds)} global command(s)")
-    except Exception as e:
-        print("⚠️ Sync error:", e)
-
-bot.run(TOKEN)
+if __name__ == "__main__":
+    bot.run(TOKEN)
+                  
