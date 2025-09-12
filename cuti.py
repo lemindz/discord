@@ -355,6 +355,11 @@ async def on_message(message):
             await safe_reply(message, ai_reply)
 
     await bot.process_commands(message)
+
+@bot.event
+async def on_message(message):
+    print(f"📩 Nhận tin nhắn từ {message.author}: {message.content}")  # debug
+    ...
     
 
 # =====================
