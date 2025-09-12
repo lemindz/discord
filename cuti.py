@@ -294,26 +294,18 @@ async def ping(interaction: discord.Interaction):
 
 # ID user đặc biệt
 SPECIAL_USER_ID = 695215402187489350
-
-# Nickname mặc định
 lover_nickname = "Anh minh"
 
+# 
 # Hàm tách câu
 def split_sentences(text: str):
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     return [s.strip() for s in sentences if s.strip()]
 
-# Hàm giới hạn số câu
-def limit_exact_sentences(text: str, is_special_user: bool = False):
-    sentences = split_sentences(text)
-    target_count = random.choice([4, 6]) if is_special_user else random.choice([2, 3])
-    return " ".join(sentences[:target_count]) if len(sentences) >= target_count else " ".join(sentences)
-
 # Slash command đổi nickname
 @bot.tree.command(name="setlovername", description="Đổi nickname đặc biệt cho người yêu 💕")
 async def set_lover_name(interaction: discord.Interaction, name: str):
     global lover_nickname
-    # Chỉ cho SPECIAL_USER được đổi
     if interaction.user.id == SPECIAL_USER_ID:
         lover_nickname = name
         await interaction.response.send_message(f"Đã đổi nickname thành: **{lover_nickname}** 💖", ephemeral=True)
@@ -323,43 +315,40 @@ async def set_lover_name(interaction: discord.Interaction, name: str):
 # Xử lý mention
 @bot.event
 async def on_message(message):
-    global chat_channel_id, lover_nickname
+    global lover_nickname
     if message.author == bot.user:
-        return
-
-    if chat_channel_id and message.channel.id != chat_channel_id:
         return
 
     if bot.user in message.mentions:
         user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()[:300]
-        async with processing_lock:
-            if message.author.id == SPECIAL_USER_ID:
-                prompt = (
-                    f"Bạn là một cô người yêu tên Min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng, "
-                    f"chỉ yêu duy nhất {lover_nickname}, hay làm lơ {lover_nickname} nhưng trong lòng rất yêu quý. "
-                    f"Hãy trả lời giống trong truyện romcom, xưng hô với {lover_nickname}, "
-                    "và trả lời bằng đúng 4 hoặc 6 câu ngắn gọn, tình cảm và dễ thương: "
-                    f"{user_message}"
-                )
-                is_special = True
-            else:
-                prompt = (
-                    "Bạn là một cô gái dễ thương, lịch sự nhưng giữ khoảng cách. "
-                    "Hãy trả lời ngắn gọn (2-3 câu) theo kiểu thân thiện nhưng không quá tình cảm: "
-                    f"{user_message}"
-                )
-                is_special = False
+        if message.author.id == SPECIAL_USER_ID:
+            prompt = (
+                f"Bạn là một cô người yêu tên Min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng, "
+                f"chỉ yêu duy nhất {lover_nickname}, hay làm lơ {lover_nickname} nhưng trong lòng rất yêu quý. "
+                f"Hãy trả lời giống trong truyện romcom, xưng hô với {lover_nickname}, "
+                "và trả lời bằng đúng 4 hoặc 6 câu ngắn gọn, tình cảm và dễ thương: "
+                f"{user_message}"
+            )
+            is_special = True
+        else:
+            prompt = (
+                "Bạn là một cô gái dễ thương, lịch sự nhưng giữ khoảng cách. "
+                "Hãy trả lời ngắn gọn (2-3 câu) theo kiểu thân thiện nhưng không quá tình cảm: "
+                f"{user_message}"
+            )
+            is_special = False
 
-            ai_reply = await get_ai_response(prompt)
-            ai_reply = limit_exact_sentences(ai_reply, is_special)
-            await safe_reply(message, ai_reply)
+        ai_reply = await get_ai_response(prompt)
+        ai_reply = limit_exact_sentences(ai_reply, is_special)
+        await message.channel.send(ai_reply)
 
     await bot.process_commands(message)
 
+# Sync lệnh slash
 @bot.event
-async def on_message(message):
-    print(f"📩 Nhận tin nhắn từ {message.author}: {message.content}")  # debug
-    ...
+async def on_ready():
+    await bot.tree.sync()
+    print(f"✅ Bot đã đăng nhập: {bot.user}")
     
 
 # =====================
