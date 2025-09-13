@@ -307,9 +307,12 @@ async def ping(interaction: discord.Interaction):
 # =====================
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
-    print(f"✅ Bot đã đăng nhập thành công: {bot.user}")
-
+    try:
+        synced = await bot.tree.sync()
+        print(f"✅ Bot đã đăng nhập: {bot.user}")
+        print(f"📦 Slash commands đã sync: {len(synced)} lệnh")
+    except Exception as e:
+        print(f"❌ Lỗi sync slash commands: {e}")
 # =====================
 # RUN BOT
 # =====================
