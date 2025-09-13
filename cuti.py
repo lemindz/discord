@@ -10,6 +10,7 @@ from discord import app_commands
 from discord.ui import View, Button
 import google.generativeai as genai
 from dotenv import load_dotenv
+from collections import defaultdict, deque
 
 # =====================
 # LOAD CONFIG
@@ -47,9 +48,12 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 chat_channel_id = None
-last_reply_time = 0
-cooldown_seconds = 5
 processing_lock = asyncio.Lock()
+
+# =====================
+# MEMORY BUFFER
+# =====================
+conversation_history = defaultdict(lambda: deque(maxlen=4))
 
 # =====================
 # GEMINI FUNCTIONS
@@ -192,113 +196,17 @@ async def cancelreferee(interaction: discord.Interaction, id: int):
     await RefereeView(id).cancel(interaction, None)
 
 # =====================
-# TICKET SYSTEM
+# CHATBOT SPECIAL USER (WITH MEMORY)
 # =====================
-class TicketPanelView(View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="challenge/spar", emoji="📩", style=discord.ButtonStyle.blurple, custom_id="ticket_challenge")
-    async def challenge_btn(self, interaction: discord.Interaction, button: Button):
-        await self.create_ticket(interaction, "challenge-spar")
-
-    @discord.ui.button(label="hỗ trợ", emoji="📩", style=discord.ButtonStyle.green, custom_id="ticket_support")
-    async def support_btn(self, interaction: discord.Interaction, button: Button):
-        await self.create_ticket(interaction, "support")
-
-    async def create_ticket(self, interaction: discord.Interaction, ticket_type: str):
-        guild = interaction.guild
-        category = guild.get_channel(TICKET_CATEGORY_ID)
-        if not category:
-            return await interaction.response.send_message("❌ Category ticket không tồn tại.", ephemeral=True)
-
-        existing = discord.utils.get(guild.text_channels, name=f"{ticket_type}-{interaction.user.id}")
-        if existing:
-            return await interaction.response.send_message(f"Bạn đã có ticket: {existing.mention}", ephemeral=True)
-
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
-        }
-        support_role = guild.get_role(SUPPORT_ROLE_ID)
-        if support_role:
-            overwrites[support_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
-
-        ticket_channel = await guild.create_text_channel(
-            name=f"{ticket_type}-{interaction.user.id}",
-            category=category,
-            overwrites=overwrites
-        )
-
-        embed = discord.Embed(
-            title=f"🎫 Ticket {ticket_type}",
-            description=f"Xin chào {interaction.user.mention}, staff sẽ hỗ trợ bạn sớm.\nNhấn nút để đóng ticket.",
-            color=discord.Color.green()
-        )
-        view = CloseTicketView(ticket_channel.id)
-        await ticket_channel.send(embed=embed, view=view)
-
-        await interaction.response.send_message(f"✅ Ticket tạo: {ticket_channel.mention}", ephemeral=True)
-
-class CloseTicketView(View):
-    def __init__(self, channel_id: int):
-        super().__init__(timeout=None)
-        self.channel_id = channel_id
-
-    @discord.ui.button(label="Đóng ticket", emoji="🔒", style=discord.ButtonStyle.danger, custom_id="close_ticket")
-    async def close_btn(self, interaction: discord.Interaction, button: Button):
-        channel = interaction.guild.get_channel(self.channel_id)
-        if not channel:
-            return await interaction.response.send_message("❌ Ticket không tồn tại.", ephemeral=True)
-        await interaction.response.send_message("🔒 Ticket sẽ đóng sau 5s...", ephemeral=True)
-        await asyncio.sleep(5)
-        await channel.delete()
-
-@bot.tree.command(name="ticketpanel", description="Gửi panel mở ticket")
-async def ticketpanel(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="Vui Lòng Tạo Đúng Ticket",
-        description="⚡ Tạo ticket nếu bạn muốn **challenge/spar** hoặc **hỗ trợ**\n🕒 Support 24/7 (maybe)\n✅ Rep dưới 5 phút (maybe not 😉)",
-        color=discord.Color.blue()
-    )
-    view = TicketPanelView()
-    await interaction.response.send_message(embed=embed, view=view)
-# =====================
-# Bộ nhớ hội thoại
-# =====================
-chat_history = {}  # Lưu hội thoại theo user_id
-
-def add_to_history(user_id: int, role: str, content: str, max_messages=4):
-    """Thêm tin nhắn vào lịch sử hội thoại"""
-    if user_id not in chat_history:
-        chat_history[user_id] = []
-    chat_history[user_id].append({"role": role, "content": content})
-    # Chỉ giữ lại 4 tin nhắn gần nhất
-    if len(chat_history[user_id]) > max_messages:
-        chat_history[user_id] = chat_history[user_id][-max_messages:]
-
-def build_prompt(user_id: int, user_message: str, is_special: bool) -> str:
-    """Ghép prompt từ lịch sử + câu nói mới nhất"""
-    history = chat_history.get(user_id, [])
-    convo = "\n".join([f"{h['role']}: {h['content']}" for h in history])
-    
-    if is_special:
-        system_prompt = (
-            f"Bạn là một cô người yêu tên Min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng. "
-            f"Bạn chỉ yêu duy nhất {lover_nickname}, và luôn xưng hô với {lover_nickname}. "
-            "Hãy trả lời giống truyện romcom, giữ câu trả lời tự nhiên, tình cảm (4-6 câu)."
-        )
+@bot.tree.command(name="setlovername", description="Đổi nickname đặc biệt cho người yêu 💕")
+async def set_lover_name(interaction: discord.Interaction, name: str):
+    global lover_nickname
+    if interaction.user.id == SPECIAL_USER_ID:
+        lover_nickname = name
+        await interaction.response.send_message(f"Đã đổi nickname thành: **{lover_nickname}** 💖", ephemeral=True)
     else:
-        system_prompt = (
-            "Bạn là một cô gái dễ thương, lịch sự nhưng giữ khoảng cách. "
-            "Hãy trả lời ngắn gọn (2-3 câu), lịch sự, không quá tình cảm."
-        )
+        await interaction.response.send_message("Bạn không có quyền đổi nickname này!", ephemeral=True)
 
-    return f"{system_prompt}\n\nCuộc hội thoại gần đây:\n{convo}\n\nUser: \"{user_message}\"\nBạn:"
-
-# =====================
-# Xử lý mention
-# =====================
 @bot.event
 async def on_message(message: discord.Message):
     global lover_nickname
@@ -306,26 +214,49 @@ async def on_message(message: discord.Message):
         return
 
     if bot.user in message.mentions:
+        if chat_channel_id and message.channel.id != chat_channel_id:
+            return
+
         user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()[:300]
 
+        # Lưu lịch sử user
+        conversation_history[message.author.id].append(("user", user_message))
+
+        # Ghép lịch sử hội thoại
+        history_text = ""
+        for role, text in conversation_history[message.author.id]:
+            if role == "user":
+                name = lover_nickname if message.author.id == SPECIAL_USER_ID else "Người dùng"
+                history_text += f"{name}: {text}\n"
+            else:
+                history_text += f"Bot: {text}\n"
+
+        # Prompt
         if message.author.id == SPECIAL_USER_ID:
+            prompt = (
+                f"Bạn là một cô người yêu tên Min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng. "
+                f"Bạn chỉ yêu duy nhất {lover_nickname}. "
+                f"Hãy trả lời như một đoạn chat tự nhiên, theo phong cách romcom. "
+                f"Trả lời ngắn (4-6 câu).\n\n"
+                f"Lịch sử hội thoại:\n{history_text}"
+            )
             is_special = True
         else:
+            prompt = (
+                "Bạn là một cô gái lạnh lùng, lịch sự nhưng giữ khoảng cách. "
+                "Hãy trả lời ngắn (2-3 câu).\n\n"
+                f"Lịch sử hội thoại:\n{history_text}"
+            )
             is_special = False
 
-        # Thêm tin nhắn user vào lịch sử
-        add_to_history(message.author.id, "User", user_message)
+        async with processing_lock:
+            ai_reply = await get_ai_response(prompt)
+            ai_reply = limit_exact_sentences(ai_reply, is_special)
 
-        # Xây prompt từ lịch sử
-        prompt = build_prompt(message.author.id, user_message, is_special)
+            # Lưu reply bot
+            conversation_history[message.author.id].append(("bot", ai_reply))
 
-        ai_reply = await get_ai_response(prompt)
-        ai_reply = limit_exact_sentences(ai_reply, is_special)
-
-        # Thêm câu trả lời của bot vào lịch sử
-        add_to_history(message.author.id, "Bot", ai_reply)
-
-        await message.channel.send(ai_reply)
+            await message.channel.send(ai_reply)
 
     await bot.process_commands(message)
 
@@ -349,6 +280,25 @@ async def clearchannel(interaction: discord.Interaction):
     await interaction.response.send_message("♻️ Bot đã được reset, giờ sẽ chat ở **tất cả các kênh** khi được tag.")
 
 # =====================
+# MEMORY BUFFER
+# =====================
+from collections import defaultdict, deque
+
+conversation_history = defaultdict(lambda: deque(maxlen=4))
+
+# =====================
+# RESET MEMORY COMMAND
+# =====================
+@bot.tree.command(name="resetmemory", description="Xoá lịch sử hội thoại với bot")
+async def resetmemory(interaction: discord.Interaction):
+    user_id = interaction.user.id
+    if user_id in conversation_history:
+        conversation_history[user_id].clear()
+        await interaction.response.send_message("🧹 Lịch sử hội thoại của bạn đã được xoá sạch!", ephemeral=True)
+    else:
+        await interaction.response.send_message("❌ Bạn chưa có lịch sử hội thoại nào để xoá.", ephemeral=True)
+
+# =====================
 # PING TEST
 # =====================
 @bot.tree.command(name="ping", description="Test slash command")
@@ -368,4 +318,3 @@ async def on_ready():
 # =====================
 if __name__ == "__main__":
     bot.run(TOKEN)
-                  
