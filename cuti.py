@@ -261,7 +261,7 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 # =====================
-# CHANNEL CONTROL
+# CHANNEL & MEMORY CONTROL
 # =====================
 @bot.tree.command(name="setchannel", description="Chọn kênh để bot chat khi được tag")
 async def setchannel(interaction: discord.Interaction, channel: discord.TextChannel):
@@ -279,17 +279,7 @@ async def clearchannel(interaction: discord.Interaction):
     chat_channel_id = None
     await interaction.response.send_message("♻️ Bot đã được reset, giờ sẽ chat ở **tất cả các kênh** khi được tag.")
 
-# =====================
-# MEMORY BUFFER
-# =====================
-from collections import defaultdict, deque
-
-conversation_history = defaultdict(lambda: deque(maxlen=4))
-
-# =====================
-# RESET MEMORY COMMAND
-# =====================
-@bot.tree.command(name="resetmemory", description="Xoá lịch sử hội thoại với bot")
+@bot.tree.command(name="resetmemory", description="Xoá lịch sử hội thoại của bạn với bot")
 async def resetmemory(interaction: discord.Interaction):
     user_id = interaction.user.id
     if user_id in conversation_history:
@@ -297,6 +287,13 @@ async def resetmemory(interaction: discord.Interaction):
         await interaction.response.send_message("🧹 Lịch sử hội thoại của bạn đã được xoá sạch!", ephemeral=True)
     else:
         await interaction.response.send_message("❌ Bạn chưa có lịch sử hội thoại nào để xoá.", ephemeral=True)
+
+@bot.tree.command(name="resetallmemory", description="Xoá toàn bộ lịch sử hội thoại (admin)")
+async def resetallmemory(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        return await interaction.response.send_message("❌ Chỉ admin mới có thể dùng lệnh này.", ephemeral=True)
+    conversation_history.clear()
+    await interaction.response.send_message("🧹 Toàn bộ lịch sử hội thoại đã được xoá sạch!", ephemeral=True)
 
 # =====================
 # PING TEST
