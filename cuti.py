@@ -63,7 +63,7 @@ async def get_ai_response(prompt: str) -> str:
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,
-            lambda: genai.GenerativeModel("gemini-2.5-flash").generate_content(prompt)
+            lambda: genai.GenerativeModel("gemini-2.5-pro").generate_content(prompt)
         )
         return response.text.strip()
     except Exception as e:
