@@ -263,19 +263,42 @@ async def ticketpanel(interaction: discord.Interaction):
     )
     view = TicketPanelView()
     await interaction.response.send_message(embed=embed, view=view)
+# =====================
+# Bộ nhớ hội thoại
+# =====================
+chat_history = {}  # Lưu hội thoại theo user_id
 
-# =====================
-# CHATBOT SPECIAL USER
-# =====================
-@bot.tree.command(name="setlovername", description="Đổi nickname đặc biệt cho người yêu 💕")
-async def set_lover_name(interaction: discord.Interaction, name: str):
-    global lover_nickname
-    if interaction.user.id == SPECIAL_USER_ID:
-        lover_nickname = name
-        await interaction.response.send_message(f"Đã đổi nickname thành: **{lover_nickname}** 💖", ephemeral=True)
+def add_to_history(user_id: int, role: str, content: str, max_messages=4):
+    """Thêm tin nhắn vào lịch sử hội thoại"""
+    if user_id not in chat_history:
+        chat_history[user_id] = []
+    chat_history[user_id].append({"role": role, "content": content})
+    # Chỉ giữ lại 4 tin nhắn gần nhất
+    if len(chat_history[user_id]) > max_messages:
+        chat_history[user_id] = chat_history[user_id][-max_messages:]
+
+def build_prompt(user_id: int, user_message: str, is_special: bool) -> str:
+    """Ghép prompt từ lịch sử + câu nói mới nhất"""
+    history = chat_history.get(user_id, [])
+    convo = "\n".join([f"{h['role']}: {h['content']}" for h in history])
+    
+    if is_special:
+        system_prompt = (
+            f"Bạn là một cô người yêu tên Min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng. "
+            f"Bạn chỉ yêu duy nhất {lover_nickname}, và luôn xưng hô với {lover_nickname}. "
+            "Hãy trả lời giống truyện romcom, giữ câu trả lời tự nhiên, tình cảm (4-6 câu)."
+        )
     else:
-        await interaction.response.send_message("Bạn không có quyền đổi nickname này!", ephemeral=True)
+        system_prompt = (
+            "Bạn là một cô gái dễ thương, lịch sự nhưng giữ khoảng cách. "
+            "Hãy trả lời ngắn gọn (2-3 câu), lịch sự, không quá tình cảm."
+        )
 
+    return f"{system_prompt}\n\nCuộc hội thoại gần đây:\n{convo}\n\nUser: \"{user_message}\"\nBạn:"
+
+# =====================
+# Xử lý mention
+# =====================
 @bot.event
 async def on_message(message: discord.Message):
     global lover_nickname
@@ -283,32 +306,26 @@ async def on_message(message: discord.Message):
         return
 
     if bot.user in message.mentions:
-        if chat_channel_id and message.channel.id != chat_channel_id:
-            return
-
         user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()[:300]
 
         if message.author.id == SPECIAL_USER_ID:
-            prompt = (
-                f"Bạn là một cô người yêu tên Min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng, "
-                f"chỉ yêu duy nhất {lover_nickname}, hay làm lơ {lover_nickname} nhưng trong lòng rất yêu quý. "
-                f"Hãy trả lời giống trong truyện romcom, xưng hô với {lover_nickname}, "
-                "và trả lời bằng đúng 4 hoặc 6 câu ngắn gọn, tình cảm và dễ thương: "
-                f"{user_message}"
-            )
             is_special = True
         else:
-            prompt = (
-                "Bạn là một cô gái lạnh lùng lịch sự nhưng giữ khoảng cách. "
-                "Hãy trả lời ngắn gọn (2-3 câu) theo kiểu không quá tình cảm: "
-                f"{user_message}"
-            )
             is_special = False
 
-        async with processing_lock:
-            ai_reply = await get_ai_response(prompt)
-            ai_reply = limit_exact_sentences(ai_reply, is_special)
-            await message.channel.send(ai_reply)
+        # Thêm tin nhắn user vào lịch sử
+        add_to_history(message.author.id, "User", user_message)
+
+        # Xây prompt từ lịch sử
+        prompt = build_prompt(message.author.id, user_message, is_special)
+
+        ai_reply = await get_ai_response(prompt)
+        ai_reply = limit_exact_sentences(ai_reply, is_special)
+
+        # Thêm câu trả lời của bot vào lịch sử
+        add_to_history(message.author.id, "Bot", ai_reply)
+
+        await message.channel.send(ai_reply)
 
     await bot.process_commands(message)
 
