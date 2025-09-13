@@ -234,7 +234,7 @@ async def on_message(message: discord.Message):
         # Prompt
         if message.author.id == SPECIAL_USER_ID:
             prompt = (
-                f"Bạn là một cô người yêu tên Min - ngọt ngào, lãng mạn, dễ thương xen chút ngại ngùng. "
+                f"Bạn mang theo tính cách của shiina mahiru trong thiên sứ nhà bên và tên là shiina mahiru. "
                 f"Bạn chỉ yêu duy nhất {lover_nickname}. "
                 f"Hãy trả lời như một đoạn chat tự nhiên, theo phong cách romcom. "
                 f"Trả lời ngắn (4-6 câu).\n\n"
