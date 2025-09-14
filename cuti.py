@@ -59,28 +59,17 @@ conversation_history = defaultdict(lambda: deque(maxlen=4))
 # =====================
 # MILESTONES SYSTEM
 # =====================
-
-MILESTONE_FILE = "milestones.json"
-
 def load_milestones():
     if not os.path.exists(MILESTONE_FILE):
-        return {}
-    try:
-        with open(MILESTONE_FILE, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-            if not content:  # file rỗng
-                return {}
-            return json.loads(content)
-    except (json.JSONDecodeError, ValueError):
-        print("⚠️ milestones.json bị hỏng, reset lại file mới.")
-        return {}
+        return {"special_user": {"messages": 0}}
+    with open(MILESTONE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def save_milestones(data):
     with open(MILESTONE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 milestones = load_milestones()
-save_milestones(milestones)  # đảm bảo file tồn tại và hợp lệ
 
 def get_relationship_stage(msg_count: int) -> str:
     if msg_count <= 20:
@@ -91,6 +80,7 @@ def get_relationship_stage(msg_count: int) -> str:
         return "Crush (hay đỏ mặt, khen ngợi)"
     else:
         return "Người yêu (ngọt ngào, thoải mái)"
+
 # =====================
 # GEMINI FUNCTIONS
 # =====================
@@ -347,6 +337,13 @@ async def resetallmemory(interaction: discord.Interaction):
     conversation_history.clear()
     await interaction.response.send_message("🧹 Toàn bộ lịch sử hội thoại đã được xoá sạch!", ephemeral=True)
 
+# =====================
+# PING TEST
+# =====================
+@bot.tree.command(name="ping", description="Test slash command")
+async def ping(interaction: discord.Interaction):
+    await interaction.response.send_message("🏓 Pong!", ephemeral=True)
+
 @bot.tree.command(name="progress", description="Xem tiến trình tình cảm với bot 💕")
 async def progress(interaction: discord.Interaction):
     if interaction.user.id != SPECIAL_USER_ID:
@@ -362,13 +359,6 @@ async def progress(interaction: discord.Interaction):
         f"Hiện tại hai bạn đang ở giai đoạn: **{stage}** 💖",
         ephemeral=True
     )
-
-# =====================
-# PING TEST
-# =====================
-@bot.tree.command(name="ping", description="Test slash command")
-async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message("🏓 Pong!", ephemeral=True)
 
 # =====================
 # ON READY
