@@ -61,9 +61,18 @@ conversation_history = defaultdict(lambda: deque(maxlen=4))
 # =====================
 def load_milestones():
     if not os.path.exists(MILESTONE_FILE):
-        return {"special_user": {"messages": 0}}
-    with open(MILESTONE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        return {}
+
+    try:
+        with open(MILESTONE_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:  # file rỗng
+                return {}
+            return json.loads(content)
+    except (json.JSONDecodeError, ValueError):
+        print("⚠️ milestones.json bị hỏng, reset lại file mới.")
+        return {}
+
 
 def save_milestones(data):
     with open(MILESTONE_FILE, "w", encoding="utf-8") as f:
