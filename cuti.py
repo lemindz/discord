@@ -36,7 +36,7 @@ genai.configure(api_key=GEMINI_KEY)
 
 # ID user đặc biệt
 SPECIAL_USER_ID = 695215402187489350
-lover_nickname = "Anh Minh"
+lover_nickname = "amane-chan"
 
 # =====================
 # BOT SETUP
