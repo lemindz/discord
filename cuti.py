@@ -19,6 +19,7 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 DATA_FILE = "wars.json"
+MILESTONE_FILE = "milestones.json"
 
 ROLE_IDS = {
     "referee": int(os.getenv("REFEREE_ROLE_ID", 0)),
@@ -54,6 +55,31 @@ processing_lock = asyncio.Lock()
 # MEMORY BUFFER
 # =====================
 conversation_history = defaultdict(lambda: deque(maxlen=4))
+
+# =====================
+# MILESTONES SYSTEM
+# =====================
+def load_milestones():
+    if not os.path.exists(MILESTONE_FILE):
+        return {"special_user": {"messages": 0}}
+    with open(MILESTONE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_milestones(data):
+    with open(MILESTONE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+milestones = load_milestones()
+
+def get_relationship_stage(msg_count: int) -> str:
+    if msg_count <= 20:
+        return "Bạn bè (ngại ngùng, giữ khoảng cách)"
+    elif msg_count <= 50:
+        return "Thân thiết (hay quan tâm, nhẹ nhàng hơn)"
+    elif msg_count <= 100:
+        return "Crush (hay đỏ mặt, khen ngợi)"
+    else:
+        return "Người yêu (ngọt ngào, thoải mái)"
 
 # =====================
 # GEMINI FUNCTIONS
@@ -196,7 +222,7 @@ async def cancelreferee(interaction: discord.Interaction, id: int):
     await RefereeView(id).cancel(interaction, None)
 
 # =====================
-# CHATBOT SPECIAL USER (WITH MEMORY)
+# CHATBOT SPECIAL USER (WITH MILESTONES)
 # =====================
 @bot.tree.command(name="setlovername", description="Đổi nickname đặc biệt cho người yêu 💕")
 async def set_lover_name(interaction: discord.Interaction, name: str):
@@ -206,6 +232,15 @@ async def set_lover_name(interaction: discord.Interaction, name: str):
         await interaction.response.send_message(f"Đã đổi nickname thành: **{lover_nickname}** 💖", ephemeral=True)
     else:
         await interaction.response.send_message("Bạn không có quyền đổi nickname này!", ephemeral=True)
+
+@bot.tree.command(name="mystage", description="Xem mốc quan hệ hiện tại 💕")
+async def mystage(interaction: discord.Interaction):
+    if interaction.user.id != SPECIAL_USER_ID:
+        return await interaction.response.send_message("❌ Chỉ người đặc biệt mới có thể xem mốc này!", ephemeral=True)
+
+    msg_count = milestones["special_user"].get("messages", 0)
+    stage = get_relationship_stage(msg_count)
+    await interaction.response.send_message(f"💖 Bạn và bot đang ở giai đoạn: **{stage}** ({msg_count} tin nhắn)", ephemeral=True)
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -231,12 +266,19 @@ async def on_message(message: discord.Message):
             else:
                 history_text += f"Bot: {text}\n"
 
-        # Prompt
+        # Prompt cho SPECIAL_USER_ID
         if message.author.id == SPECIAL_USER_ID:
+            # Tăng counter
+            milestones["special_user"]["messages"] = milestones["special_user"].get("messages", 0) + 1
+            save_milestones(milestones)
+
+            msg_count = milestones["special_user"]["messages"]
+            stage = get_relationship_stage(msg_count)
+
             prompt = (
-                f"Bạn mang theo tính cách của shiina mahiru trong thiên sứ nhà bên và tên là shiina mahiru. "
-                f"dù bạn với  {lover_nickname} là bạn nhưng lại đang thích thầm {lover_nickname}. "
-                f"Hãy trả lời như một đoạn chat tự nhiên, theo phong cách romcom. "
+                f"Bạn mang theo tính cách của Shiina Mahiru trong Thiên Sứ Nhà Bên. "
+                f"Hiện tại bạn và {lover_nickname} đang ở giai đoạn: {stage}. "
+                f"Hãy trả lời như một đoạn chat romcom, tự nhiên. "
                 f"Trả lời ngắn (4-6 câu).\n\n"
                 f"Lịch sử hội thoại:\n{history_text}"
             )
@@ -295,6 +337,22 @@ async def resetallmemory(interaction: discord.Interaction):
     conversation_history.clear()
     await interaction.response.send_message("🧹 Toàn bộ lịch sử hội thoại đã được xoá sạch!", ephemeral=True)
 
+@bot.tree.command(name="progress", description="Xem tiến trình tình cảm với bot 💕")
+async def progress(interaction: discord.Interaction):
+    if interaction.user.id != SPECIAL_USER_ID:
+        return await interaction.response.send_message(
+            "❌ Chỉ người đặc biệt mới có thể xem tiến trình này!", ephemeral=True
+        )
+
+    msg_count = milestones["special_user"].get("messages", 0)
+    stage = get_relationship_stage(msg_count)
+
+    await interaction.response.send_message(
+        f"💌 Bạn đã gửi **{msg_count}** tin nhắn cho bot.\n"
+        f"Hiện tại hai bạn đang ở giai đoạn: **{stage}** 💖",
+        ephemeral=True
+    )
+
 # =====================
 # PING TEST
 # =====================
@@ -313,6 +371,7 @@ async def on_ready():
         print(f"📦 Slash commands đã sync: {len(synced)} lệnh")
     except Exception as e:
         print(f"❌ Lỗi sync slash commands: {e}")
+
 # =====================
 # RUN BOT
 # =====================
