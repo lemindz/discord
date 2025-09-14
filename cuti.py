@@ -58,17 +58,26 @@ conversation_history = defaultdict(lambda: deque(maxlen=4))
 # =====================
 # GEMINI FUNCTIONS
 # =====================
+
+last_request_time = 0
+
 async def get_ai_response(prompt: str) -> str:
+    global last_request_time
     try:
+        now = time.time()
+        if now - last_request_time < 6:  # 10 req/phút ≈ 1 req/6 giây
+            await asyncio.sleep(6 - (now - last_request_time))
+
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,
             lambda: genai.GenerativeModel("gemini-2.5-flash").generate_content(prompt)
         )
+        last_request_time = time.time()
         return response.text.strip()
     except Exception as e:
         print("❌ Gemini error:", e)
-        return "Em bị trục trặc một chút... nhắn lại cho em sau nha 💕"
+        return "Em bị giới hạn quota, thử lại sau nhé 💕"
 
 def split_sentences(text: str):
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
