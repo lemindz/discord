@@ -59,17 +59,28 @@ conversation_history = defaultdict(lambda: deque(maxlen=4))
 # =====================
 # MILESTONES SYSTEM
 # =====================
+
+MILESTONE_FILE = "milestones.json"
+
 def load_milestones():
     if not os.path.exists(MILESTONE_FILE):
-        return {"special_user": {"messages": 0}}
-    with open(MILESTONE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        return {}
+    try:
+        with open(MILESTONE_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:  # file rỗng
+                return {}
+            return json.loads(content)
+    except (json.JSONDecodeError, ValueError):
+        print("⚠️ milestones.json bị hỏng, reset lại file mới.")
+        return {}
 
 def save_milestones(data):
     with open(MILESTONE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 milestones = load_milestones()
+save_milestones(milestones)  # đảm bảo file tồn tại và hợp lệ
 
 def get_relationship_stage(msg_count: int) -> str:
     if msg_count <= 20:
@@ -80,7 +91,6 @@ def get_relationship_stage(msg_count: int) -> str:
         return "Crush (hay đỏ mặt, khen ngợi)"
     else:
         return "Người yêu (ngọt ngào, thoải mái)"
-
 # =====================
 # GEMINI FUNCTIONS
 # =====================
