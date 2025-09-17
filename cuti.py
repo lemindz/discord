@@ -181,7 +181,7 @@ async def createwar(interaction: discord.Interaction, team1: str, team2: str, ti
 
     text = make_war_text(team1, team2, time, "VACANT", war_id)
     view = RefereeView(war_id)
-    msg = await channel.send(embed=embed, view=view)
+    msg = await channel.send(text)
 
     data["wars"][str(war_id)] = {
         "team1": team1,
