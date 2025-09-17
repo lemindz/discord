@@ -109,10 +109,10 @@ data = load_data()
 # =====================
 def make_war_text(team1, team2, time_str, referee_mention, war_id):
     return (
-        f"# {team1} VS {team2} "
-        f"## ⏰ Time: {time_str}\n"
-        f"## 👮 Referee: {referee_mention}\n"
-        f"## 🆔 ID: {war_id}\n\n"
+        f"# {team1} VS {team2}\n"
+        f"### ⏰ Time: {time_str}\n"
+        f"### 👮 Referee: {referee_mention}\n"
+        f"### 🆔 ID: {war_id}\n\n"
         f"/referee <id> để nhận referee • /cancelreferee <id> để hủy referee"
     )
 
