@@ -197,14 +197,16 @@ async def createwar(interaction: discord.Interaction, team1: str, team2: str, ti
 
     await interaction.followup.send(f"✅ War ID {war_id} đã tạo ở {channel.mention}", ephemeral=True)
 
-@bot.tree.command(name="referee", description="Nhận referee cho war")
-async def referee(interaction: discord.Interaction, id: int):
-    await RefereeView(id).claim(interaction, None)
+@bot.tree.command(name="referee", description="Nhận referee cho 1 war")
+async def referee(interaction: discord.Interaction, war_id: int):
+    ref = RefereeView(war_id)
+    await ref.claim(interaction)   # ❌ không truyền None nữa
 
-@bot.tree.command(name="cancelreferee", description="Hủy referee war")
-async def cancelreferee(interaction: discord.Interaction, id: int):
-    await RefereeView(id).cancel(interaction, None)
-
+@bot.tree.command(name="cancelreferee", description="Hủy referee của 1 war")
+async def cancelreferee(interaction: discord.Interaction, war_id: int):
+    ref = RefereeView(war_id)
+    await ref.cancel(interaction)  # ❌ không truyền None
+    
 # =====================
 # CHATBOT SPECIAL USER (WITH MEMORY)
 # =====================
