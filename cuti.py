@@ -88,6 +88,7 @@ def limit_exact_sentences(text: str, is_special_user: bool = False):
     target_count = random.choice([4, 6]) if is_special_user else random.choice([2, 3])
     return " ".join(sentences[:target_count]) if len(sentences) >= target_count else " ".join(sentences)
 
+
 # =====================
 # SAVE / LOAD WAR DATA
 # =====================
@@ -103,24 +104,26 @@ def save_data(data):
 
 data = load_data()
 
-def make_war_embed(team1, team2, time_str, referee_mention, war_id):
-    emb = discord.Embed(title=f"# {team1} VS {team2}", color=discord.Color.dark_blue())
-    emb.add_field(name="## ⏰ Time", value=time_str, inline=False)
-    emb.add_field(name="## 🧑‍⚖️ Referee", value=referee_mention, inline=False)
-    emb.add_field(name="## 🔖 ID", value=str(war_id), inline=False)
-    emb.set_footer(text="/referee <id> để nhận referee • /cancelreferee <id> để hủy referee")
-    return emb
+# =====================
+# WAR TEXT FORMAT
+# =====================
+def make_war_text(team1, team2, time_str, referee_mention, war_id):
+    return (
+        f"# {team1} VS {team2} "
+        f"## ⏰ Time: {time_str}\n"
+        f"## 👮 Referee: {referee_mention}\n"
+        f"## 🆔 ID: {war_id}\n\n"
+        f"/referee <id> để nhận referee • /cancelreferee <id> để hủy referee"
+    )
 
 # =====================
-# REFEREE VIEW
+# REFEREE HANDLER
 # =====================
-class RefereeView(View):
+class RefereeView:
     def __init__(self, war_id: int):
-        super().__init__(timeout=None)
         self.war_id = war_id
 
-    @discord.ui.button(label="Nhận referee", style=discord.ButtonStyle.primary, custom_id="claim_referee")
-    async def claim(self, interaction: discord.Interaction, button: Button):
+    async def claim(self, interaction: discord.Interaction):
         global data
         data = load_data()
         war = data["wars"].get(str(self.war_id))
@@ -135,13 +138,12 @@ class RefereeView(View):
 
         channel = interaction.guild.get_channel(war["channel_id"])
         msg = await channel.fetch_message(war["message_id"])
-        new_emb = make_war_embed(war["team1"], war["team2"], war["time"], war["referee_mention"], self.war_id)
-        await msg.edit(embed=new_emb, view=self)
+        new_text = make_war_text(war["team1"], war["team2"], war["time"], war["referee_mention"], self.war_id)
+        await msg.edit(content=new_text)
 
         await interaction.response.send_message(f"✅ Bạn đã nhận referee cho war {self.war_id}.", ephemeral=True)
 
-    @discord.ui.button(label="Hủy referee", style=discord.ButtonStyle.danger, custom_id="cancel_referee")
-    async def cancel(self, interaction: discord.Interaction, button: Button):
+    async def cancel(self, interaction: discord.Interaction):
         global data
         data = load_data()
         war = data["wars"].get(str(self.war_id))
@@ -158,13 +160,12 @@ class RefereeView(View):
 
         channel = interaction.guild.get_channel(war["channel_id"])
         msg = await channel.fetch_message(war["message_id"])
-        new_emb = make_war_embed(war["team1"], war["team2"], war["time"], war["referee_mention"], self.war_id)
-        await msg.edit(embed=new_emb, view=self)
+        new_text = make_war_text(war["team1"], war["team2"], war["time"], war["referee_mention"], self.war_id)
+        await msg.edit(content=new_text)
 
-        role_pings = [f"<@&{rid}>" for rid in ROLE_IDS.values() if rid]
-        await channel.send(f"⚠️ Referee war ID {self.war_id} đã hủy, cần thay thế.\n{' '.join(role_pings)}")
+        await channel.send(f"⚠️ Referee war ID {self.war_id} đã hủy, cần thay thế!")
 
-        await interaction.response.send_message("🔴 Referee đã hủy.", ephemeral=True)
+
 
 # =====================
 # REFEREE COMMANDS
