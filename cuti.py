@@ -104,10 +104,10 @@ def save_data(data):
 data = load_data()
 
 def make_war_embed(team1, team2, time_str, referee_mention, war_id):
-    emb = discord.Embed(title=f"{team1} VS {team2}", color=discord.Color.dark_blue())
-    emb.add_field(name="⏰ Time", value=time_str, inline=False)
-    emb.add_field(name="🧑‍⚖️ Referee", value=referee_mention, inline=False)
-    emb.add_field(name="🔖 ID", value=str(war_id), inline=False)
+    emb = discord.Embed(title=f"# {team1} VS {team2}", color=discord.Color.dark_blue())
+    emb.add_field(name="## ⏰ Time", value=time_str, inline=False)
+    emb.add_field(name="## 🧑‍⚖️ Referee", value=referee_mention, inline=False)
+    emb.add_field(name="## 🔖 ID", value=str(war_id), inline=False)
     emb.set_footer(text="/referee <id> để nhận referee • /cancelreferee <id> để hủy referee")
     return emb
 
