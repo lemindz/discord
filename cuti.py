@@ -163,7 +163,7 @@ class RefereeView:
         new_text = make_war_text(war["team1"], war["team2"], war["time"], war["referee_mention"], self.war_id)
         await msg.edit(content=new_text)
 
-        await channel.send(f"⚠️ Referee war ID {self.war_id} đã hủy, cần thay thế!")
+        await channel.send(f"⚠️ Referee war ID {self.war_id} đã hủy, cần thay thế! @referee ")
 
 
 
