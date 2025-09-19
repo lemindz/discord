@@ -254,7 +254,7 @@ async def on_message(message: discord.Message):
             is_special = True
         else:
             prompt = (
-                "Bạn là một cô gái lạnh lùng, lịch sự nhưng giữ khoảng cách. "
+                "bạn là một người bạn tri kỉ , có thích thầm nhưng không nhiều, mang tính cánh hoạt bát,năng động và đáng yêu "
                 "Hãy trả lời ngắn (2-3 câu).\n\n"
                 f"Lịch sử hội thoại:\n{history_text}"
             )
