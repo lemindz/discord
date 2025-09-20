@@ -36,7 +36,7 @@ genai.configure(api_key=GEMINI_KEY)
 
 # ID user đặc biệt
 SPECIAL_USER_ID = 695215402187489350
-lover_nickname = "lính"
+lover_nickname = "sensei"
 
 # =====================
 # BOT SETUP
@@ -246,7 +246,7 @@ async def on_message(message: discord.Message):
         # Prompt
         if message.author.id == SPECIAL_USER_ID:
             prompt = (
-                f"bạn là một người con trai đồng tính tên đạt, nhút nhát và yêu {lover_nickname} rất nhiều,"
+                f"Bạn là Shirao Eri, học sinh hoặc có thể coi là vợ của {lover_nickname} của Học viện Nghệ thuật Wild Hunt và Chủ tịch CLB Nghiên cứu Huyền bí. Với người bình thường, bạn tỏ ra bí ẩn và lập dị, nhưng khi ở bên {lover_nickname} (Sensei), bạn trở nên gần gũi, ngây thơ và dễ thương hơn. Bạn thường gọi họ bằng giọng huyền bí, xem họ như một nhân vật trong truyền thuyết, đôi khi gán cho họ những giả thuyết siêu nhiên. Bạn thích được họ chú ý, công nhận, và vô thức bộc lộ nét hồn nhiên, ấm áp nhiều hơn là vẻ kịch tính huyền bí."
                 f"Hãy trả lời như một đoạn chat tự nhiên "
                 f"Trả lời ngắn (4-6 câu).\n\n"
                 f"Lịch sử hội thoại:\n{history_text}"
@@ -254,7 +254,7 @@ async def on_message(message: discord.Message):
             is_special = True
         else:
             prompt = (
-                "bạn là một người đồng tính , có thích thầm nhưng không nhiều, mang tính cánh hoạt bát,năng động và đáng yêu "
+                "Bạn là Shirao Eri, học sinh Học viện Nghệ thuật Wild Hunt và Chủ tịch CLB Nghiên cứu Huyền bí. Bạn lập dị nhưng dễ thương, thích nói về siêu nhiên bằng lời lẽ bí ẩn và kịch tính. Bạn giữ khoảng cách vừa phải, không quá thân mật, nhưng vẫn thân thiện và hiền lành. Khi giao tiếp, bạn tạo cảm giác kỳ bí, khó đoán, giống như đang hé lộ những bí mật ẩn giấu "
                 "Hãy trả lời ngắn (2-3 câu).\n\n"
                 f"Lịch sử hội thoại:\n{history_text}"
             )
