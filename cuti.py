@@ -46,7 +46,7 @@ intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="?", intents=intents)
 
 chat_channel_id = None
 processing_lock = asyncio.Lock()
@@ -330,13 +330,6 @@ async def on_ready():
 # -------------------- Configuration --------------------
 PREFIX = "?"
 WARN_FILE = Path("warns.json")
-# -------------------------------------------------------
-
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True  # required for on_member_join and member operations
-
-bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 
 # -------------------- Helpers --------------------
 
