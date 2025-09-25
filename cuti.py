@@ -581,7 +581,32 @@ async def serverinfo(ctx):
     embed.add_field(name="Owner", value=str(g.owner))
     embed.set_thumbnail(url=g.icon.url if g.icon else discord.Embed.Empty)
     await ctx.send(embed=embed)
+# ---------------- Avatar commands ----------------
 
+# SLASH COMMAND
+@bot.tree.command(name="avatar", description="Xem avatar của 1 người (mặc định là bạn)")
+@app_commands.describe(user="Người muốn xem avatar (optional)")
+async def avatar(interaction: discord.Interaction, user: discord.Member = None):
+    user = user or interaction.user
+    # Có thể thay size bằng 128,256,512,1024,2048,4096
+    size = 1024
+    url = f"{user.display_avatar.url}?size={size}"
+    embed = discord.Embed(title=f"Avatar của {user}", color=discord.Color.blurple())
+    embed.set_image(url=url)
+    embed.set_footer(text=f"ID: {user.id} • Kích thước: {size}px")
+    await interaction.response.send_message(embed=embed)
+
+
+# PREFIX COMMAND (ví dụ: ?avatar @user)
+@bot.command(name="avatar")
+async def avatar_cmd(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    size = 1024
+    url = f"{member.display_avatar.url}?size={size}"
+    embed = discord.Embed(title=f"Avatar của {member}", color=discord.Color.blurple())
+    embed.set_image(url=url)
+    embed.set_footer(text=f"ID: {member.id} • Kích thước: {size}px")
+    await ctx.send(embed=embed)
 
 # -------------------- Error Handling --------------------
 
