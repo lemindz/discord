@@ -615,13 +615,6 @@ async def on_command_error(ctx, error):
         print("Error:", error)
         await ctx.send("❌ An error occurred. Check console for details.")
 
-
-# -------------------- Run --------------------
-
-if __name__ == "__main__":
-    if TOKEN == "YOUR_BOT_TOKEN_HERE":
-        print("Warning: You didn't set a token. Put it into the DISCORD_TOKEN environment variable or edit the file.")
-    bot.run(TOKEN)
 # =====================
 # RUN BOT
 # =====================
