@@ -5,6 +5,7 @@ import re
 import time
 import asyncio
 import discord
+import traceback
 from discord.ext import commands
 from discord import app_commands
 from discord.ui import View, Button
@@ -597,16 +598,71 @@ async def serverinfo(ctx):
 
 @bot.event
 async def on_command_error(ctx, error):
+    """
+    Handler cho prefix commands (ví dụ ?kick).
+    - Không báo khi lệnh không tồn tại (CommandNotFound).
+    - Giữ hành xử thông báo cho MissingPermissions / MissingRequiredArgument nếu bạn muốn.
+    - Các lỗi khác sẽ được log ra console nhưng **không gửi** cho user (im lặng).
+    """
+    # 1) Lệnh không tồn tại -> im lặng
+    if isinstance(error, commands.CommandNotFound):
+        return
+
+    # 2) Quyền thiếu -> thông báo nhẹ (tuỳ bạn muốn)
     if isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ You do not have permission to run that command.")
-    elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("❌ Missing argument. Check your command usage.")
-    elif isinstance(error, commands.BadArgument):
-        await ctx.send("❌ Bad argument. Make sure you mentioned roles/members correctly.")
-    else:
-        # Unhandled errors — print to console and send minimal user message
-        print("Error:", error)
-        await ctx.send("❌ An error occurred. Check console for details.")
+        try:
+            await ctx.send("❌ Bạn không có quyền thực hiện lệnh này.")
+        except Exception:
+            pass
+        return
+
+    # 3) Thiếu arg -> hướng dẫn ngắn gọn
+    if isinstance(error, commands.MissingRequiredArgument):
+        try:
+            await ctx.send("❌ Thiếu tham số. Vui lòng kiểm tra cú pháp lệnh.")
+        except Exception:
+            pass
+        return
+
+    # 4) BadArgument -> thông báo ngắn
+    if isinstance(error, commands.BadArgument):
+        try:
+            await ctx.send("❌ Tham số không hợp lệ. Kiểm tra lại mentions/IDs.")
+        except Exception:
+            pass
+        return
+
+    # 5) Các lỗi còn lại: log để dev kiểm tra, nhưng không spam người dùng
+    print("Unhandled command error:", error)
+    traceback.print_exception(type(error), error, error.__traceback__)
+    # Không gửi message cho user -> im lặng
+    return
+
+# Slash / app command errors
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    """
+    Handler cho slash commands.
+    - Không thông báo khi lệnh không tồn tại.
+    - Có thể thông báo MissingPermissions.
+    """
+    # Một số lỗi app_commands có cấu trúc khác
+    if isinstance(error, app_commands.CommandNotFound):
+        # im lặng khi command không biết
+        return
+
+    if isinstance(error, app_commands.MissingPermissions):
+        try:
+            await interaction.response.send_message("❌ Bạn không có quyền thực hiện lệnh này.", ephemeral=True)
+        except Exception:
+            pass
+        return
+
+    # Log những lỗi khác để debug (nhưng không gửi cho user)
+    print("Unhandled app command error:", error)
+    traceback.print_exception(type(error), error, error.__traceback__)
+    # im lặng
+    return
 
 # =====================
 # RUN BOT
