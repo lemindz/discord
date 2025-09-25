@@ -664,8 +664,7 @@ async def on_ready():
         print(f"✅ Bot đã đăng nhập: {bot.user}")
         print(f"📦 Slash commands đã sync: {len(synced)} lệnh")
     except Exception as e:
-        print(f"❌ Lỗi sync slash commands: {e}")
-        
+        print(f"❌ Lỗi sync slash commands: {e}")    
 # =====================
 # RUN BOT
 # =====================
