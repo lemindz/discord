@@ -315,17 +315,6 @@ async def resetallmemory(interaction: discord.Interaction):
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("🏓 Pong!", ephemeral=True)
 
-# =====================
-# ON READY
-# =====================
-@bot.event
-async def on_ready():
-    try:
-        synced = await bot.tree.sync()
-        print(f"✅ Bot đã đăng nhập: {bot.user}")
-        print(f"📦 Slash commands đã sync: {len(synced)} lệnh")
-    except Exception as e:
-        print(f"❌ Lỗi sync slash commands: {e}")
 
 
 # -------------------- Configuration --------------------
@@ -664,6 +653,19 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
     # im lặng
     return
 
+
+# =====================
+# ON READY
+# =====================
+@bot.event
+async def on_ready():
+    try:
+        synced = await bot.tree.sync()
+        print(f"✅ Bot đã đăng nhập: {bot.user}")
+        print(f"📦 Slash commands đã sync: {len(synced)} lệnh")
+    except Exception as e:
+        print(f"❌ Lỗi sync slash commands: {e}")
+        
 # =====================
 # RUN BOT
 # =====================
