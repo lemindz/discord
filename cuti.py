@@ -385,8 +385,8 @@ async def help_cmd(ctx):
 def mod_check(ctx):
     return ctx.author.guild_permissions.manage_messages or ctx.author.guild_permissions.kick_members
 
-def parse_time(time_str: str) -> int:
-    """Chuyển đổi chuỗi thời gian (10s, 5m, 2h, 1d) thành giây"""
+def parse_time(time_str: str):
+    """Chuyển đổi chuỗi thời gian (10s, 5m, 2h, 1d) thành timedelta"""
     time_str = time_str.lower().strip()
     unit = time_str[-1]
     try:
@@ -395,13 +395,13 @@ def parse_time(time_str: str) -> int:
         return None
 
     if unit == "s":  # giây
-        return value
+        return timedelta(seconds=value)
     elif unit == "m":  # phút
-        return value * 60
+        return timedelta(minutes=value)
     elif unit == "h":  # giờ
-        return value * 3600
+        return timedelta(hours=value)
     elif unit == "d":  # ngày
-        return value * 86400
+        return timedelta(days=value)
     else:
         return None
         
