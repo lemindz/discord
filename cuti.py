@@ -356,19 +356,7 @@ async def log_action(guild: discord.Guild, message: str):
 async def on_ready():
     print(f"Bot ready: {bot.user} (guilds: {len(bot.guilds)})")
 
-
-@bot.event
-async def on_member_join(member: discord.Member):
-    guild = member.guild
-    welcome_channel = discord.utils.get(guild.text_channels, name="welcome")
-    if welcome_channel is None:
-        # don't create flood — only create if necessary
-        try:
-            welcome_channel = await guild.create_text_channel("welcome")
-        except Exception:
-            return
-    await welcome_channel.send(f"Welcome {member.mention}! Say hi 👋")
-
+    
 
 # -------------------- Basic Commands --------------------
 
