@@ -417,36 +417,42 @@ async def kick(ctx, member: discord.Member, *, reason: str = "No reason provided
         await ctx.send(f"❌ Could not kick: {e}")
 
 
-@bot.command(name="ban")
+
+# Lệnh ban
+@bot.command()
 @commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, time_str: str = "0", *, reason="Không có lý do"):
-    seconds = 0
-    if time_str != "0":
-        seconds = parse_time(time_str)
-        if seconds is None:
-            return await ctx.send("❌ Sai định dạng thời gian. Ví dụ: `10s`, `5m`, `2h`, `1d`")
-
+async def ban(ctx, member: discord.Member, duration: str = None, *, reason: str = "Không có lý do"):
     try:
-        await member.ban(reason=reason)
-        await ctx.send(f"⛔ {member} đã bị ban. Thời gian: {time_str if seconds > 0 else 'Vĩnh viễn'}")
-        await log_action(ctx.guild, f"{ctx.author} banned {member} trong {time_str if seconds > 0 else 'vĩnh viễn'}. Lý do: {reason}", user=member, color=discord.Color.red())
+        if duration:
+            delta = parse_time(duration)
+            if not delta:
+                return await ctx.send("❌ Sai định dạng thời gian! Dùng: 10s, 5m, 2h, 1d")
+            await member.ban(reason=reason)
 
-        if seconds > 0:
-            msg = await ctx.send(f"⏳ Countdown ban {member}: {seconds}s")
-            for i in range(seconds, 0, -1):
-                await asyncio.sleep(1)
-                if i % 5 == 0 or i <= 5:  # update mỗi 5s hoặc 5 giây cuối
-                    try:
-                        await msg.edit(content=f"⏳ Countdown ban {member}: {i-1}s")
-                    except:
-                        break
+            embed = discord.Embed(
+                description=f"{member.mention} đã bị ban trong **{duration}**\n**Lý do:** {reason}",
+                colour=discord.Colour.from_rgb(255, 255, 255)  # màu trắng
+            )
+            embed.set_footer(text=f"Người thực hiện: {ctx.author}", icon_url=ctx.author.display_avatar.url)
+            await ctx.send(embed=embed)
 
-            # Auto unban
-            await ctx.guild.unban(member)
-            await log_action(ctx.guild, f"{member} đã được unban tự động sau {time_str}.", user=member, color=discord.Color.green())
+            # Gỡ ban sau thời gian chỉ định
+            await discord.utils.sleep_until(discord.utils.utcnow() + delta)
+            await ctx.guild.unban(member, reason="Hết thời gian ban")
+
+        else:
+            await member.ban(reason=reason)
+            embed = discord.Embed(
+                title="⛔ Thành viên bị ban",
+                description=f"{member.mention} đã bị ban **vĩnh viễn**\n**Lý do:** {reason}",
+                colour=discord.Colour.from_rgb(255, 255, 255)
+            )
+            embed.set_footer(text=f"Người thực hiện: {ctx.author}", icon_url=ctx.author.display_avatar.url)
+            await ctx.send(embed=embed)
+
     except Exception as e:
         await ctx.send(f"❌ Không thể ban: {e}")
-        
+
 
 
 @bot.command(name="unban")
@@ -490,34 +496,26 @@ async def ensure_muted_role(guild: discord.Guild):
     return role
 
 
-@bot.command(name="mute")
+# Lệnh mute
+@bot.command()
 @commands.has_permissions(moderate_members=True)
-async def mute(ctx, member: discord.Member, time_str: str):
-    seconds = parse_time(time_str)
-    if seconds is None:
-        return await ctx.send("❌ Sai định dạng thời gian. Ví dụ: `10s`, `5m`, `2h`, `1d`")
-
+async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "Không có lý do"):
+    delta = parse_time(duration)
+    if not delta:
+        return await ctx.send("❌ Sai định dạng thời gian! Dùng: 10s, 5m, 2h, 1d")
+    until = discord.utils.utcnow() + delta
     try:
-        await member.timeout(discord.utils.utcnow() + discord.timedelta(seconds=seconds), reason=f"Muted by {ctx.author}")
-        await ctx.send(f"🔇 {member.mention} đã bị mute {time_str}.")
-        await log_action(ctx.guild, f"{ctx.author} muted {member} trong {time_str}.", user=member, color=discord.Color.orange())
+        await member.edit(timeout=until, reason=reason)
 
-        # Countdown
-        msg = await ctx.send(f"⏳ Countdown mute {member.mention}: {seconds}s")
-        for i in range(seconds, 0, -1):
-            await asyncio.sleep(1)
-            if i % 5 == 0 or i <= 5:  # update mỗi 5s, hoặc 5 giây cuối
-                try:
-                    await msg.edit(content=f"⏳ Countdown mute {member.mention}: {i-1}s")
-                except:
-                    break
-
-        # Auto unmute
-        await member.timeout(None)
-        await ctx.send(f"🔊 {member.mention} đã được unmute tự động.")
-        await log_action(ctx.guild, f"{member} đã được unmute tự động sau {time_str}.", user=member, color=discord.Color.green())
+        embed = discord.Embed(
+            description=f"thằng ngu {member.mention} đã bị mute trong **{duration}**\n**Lý do:** {reason}",
+            colour=discord.Colour.from_rgb(255, 255, 255)  # màu trắng
+        )
+        embed.set_footer(text=f"Người thực hiện: {ctx.author}", icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
     except Exception as e:
         await ctx.send(f"❌ Không thể mute: {e}")
+        
         
 
 @bot.command(name="unmute")
