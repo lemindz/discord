@@ -370,7 +370,7 @@ async def ping(ctx):
 
 @bot.command(name="help")
 async def help_cmd(ctx):
-    embed = discord.Embed(title="Help — Commands", color=discord.Color.white())
+    embed = discord.Embed(title="Help — Commands", color=0xCCCCCC)
     embed.add_field(name="Moderation", value="?kick @user [reason]\n?ban @user [duration]\n?unban user#1234", inline=False)
     embed.add_field(name="Utility", value="?clear <num>\n?userinfo @user\n?serverinfo", inline=False)
     embed.add_field(name="Role/Lock", value="?mute @user [duration]\n?unmute @user\n?lock\n?unlock", inline=False)
