@@ -13,6 +13,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from collections import defaultdict, deque
 from pathlib import Path
+from datetime import timedelta
 
 # =====================
 # LOAD CONFIG
@@ -371,9 +372,10 @@ async def ping(ctx):
 @bot.command(name="help")
 async def help_cmd(ctx):
     embed = discord.Embed(title="Help — Commands", color=0xCCCCCC)
-    embed.add_field(name="Moderation", value="?kick @user [reason]\n?ban @user [duration]\n?unban user#1234", inline=False)
+    embed.add_field(name="Moderation", value="?kick @user [lí do]\n?ban @user [thời gian]\n?unban user#1234", inline=False)
     embed.add_field(name="Utility", value="?clear <num>\n?userinfo @user\n?serverinfo", inline=False)
-    embed.add_field(name="Role/Lock", value="?mute @user [duration]\n?unmute @user\n?lock\n?unlock", inline=False)
+    embed.add_field(name="Role/Lock", value="?mute @user [thời gian]\n?unmute @user\n?lock\n?unlock", inline=False)
+    embed.add_field(name="misc", value="?av @user\n?setnick @user [tên]"
     embed.set_footer(text="Prefix: ?")
     await ctx.send(embed=embed)
 
@@ -643,21 +645,20 @@ async def avatar(interaction: discord.Interaction, user: discord.Member = None):
     # Có thể thay size bằng 128,256,512,1024,2048,4096
     size = 1024
     url = f"{user.display_avatar.url}?size={size}"
-    embed = discord.Embed(title=f"Avatar của {user}", color=discord.Color.blurple())
+    embed = discord.Embed(title=f"Avatar của {user}", color=0xFFFFFF)
     embed.set_image(url=url)
     embed.set_footer(text=f"ID: {user.id} • Kích thước: {size}px")
     await interaction.response.send_message(embed=embed)
 
 
 # PREFIX COMMAND (ví dụ: ?avatar @user)
-@bot.command(name="avatar")
+@bot.command(name="av")
 async def avatar_cmd(ctx, member: discord.Member = None):
     member = member or ctx.author
     size = 1024
     url = f"{member.display_avatar.url}?size={size}"
     embed = discord.Embed(title=f"Avatar của {member}", color=discord.Color.blurple())
     embed.set_image(url=url)
-    embed.set_footer(text=f"ID: {member.id} • Kích thước: {size}px")
     await ctx.send(embed=embed)
 
 # -------------------- Error Handling --------------------
@@ -942,6 +943,22 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
             color=discord.Color.yellow()
         )
 
+@bot.command(name="setnick")
+@commands.has_permissions(manage_nicknames=True)
+async def setnick(ctx, member: discord.Member, *, nickname: str = None):
+    """Đổi nickname của 1 thành viên"""
+    try:
+        old_nick = member.display_name
+        await member.edit(nick=nickname)
+        if nickname:
+            await ctx.send(f"✅ Nickname của {member.mention} đã đổi từ **{old_nick}** thành **{nickname}**")
+            await log_action(ctx.guild, f"{ctx.author} đổi nickname {member} từ **{old_nick}** thành **{nickname}**", member)
+        else:
+            await ctx.send(f"♻️ Nickname của {member.mention} đã được reset về mặc định")
+            await log_action(ctx.guild, f"{ctx.author} reset nickname của {member}", member)
+    except Exception as e:
+        await ctx.send(f"❌ Không thể đổi nickname: {e}")
+        
 
 # =====================
 # ON READY
