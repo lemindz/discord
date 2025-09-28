@@ -777,6 +777,109 @@ async def on_raw_reaction_remove(payload):
                 await member.remove_roles(role, reason="Reaction role remove")
                 print(f"❌ Gỡ {role.name} cho {member.display_name}")
 
+# ---------------log------------------
+
+async def log_action(
+    guild: discord.Guild,
+    message: str,
+    user: discord.Member | discord.User = None,
+    color=discord.Color.orange()
+):
+    ch = discord.utils.get(guild.text_channels, name="mod-log")
+    if ch is None:
+        try:
+            ch = await guild.create_text_channel("mod-log")
+        except Exception:
+            return
+
+    embed = discord.Embed(
+        description=message,
+        color=color,
+        timestamp=discord.utils.utcnow()
+    )
+
+    if user:
+        embed.set_author(name=str(user), icon_url=user.display_avatar.url)
+
+    embed.set_footer(text=f"Server: {guild.name}")
+    await ch.send(embed=embed)
+
+# Thành viên vào/ra
+@bot.event
+async def on_member_join(member: discord.Member):
+    await log_action(member.guild, f"✅ {member.mention} đã tham gia server.", user=member, color=discord.Color.green())
+
+@bot.event
+async def on_member_remove(member: discord.Member):
+    await log_action(member.guild, f"👋 {member} đã rời server.", user=member, color=discord.Color.red())
+
+# Update thông tin member
+@bot.event
+async def on_member_update(before: discord.Member, after: discord.Member):
+    changes = []
+    if before.nick != after.nick:
+        changes.append(f"🔤 Nick đổi: `{before.nick}` → `{after.nick}`")
+    if before.roles != after.roles:
+        before_roles = {r.id for r in before.roles}
+        after_roles = {r.id for r in after.roles}
+        added = [r.mention for r in after.roles if r.id not in before_roles]
+        removed = [r.name for r in before.roles if r.id not in after_roles]
+        if added:
+            changes.append(f"➕ Thêm role: {', '.join(added)}")
+        if removed:
+            changes.append(f"➖ Gỡ role: {', '.join(removed)}")
+    if changes:
+        await log_action(after.guild, "📝 Update " + " | ".join(changes), user=after, color=discord.Color.blurple())
+
+# Kênh
+@bot.event
+async def on_guild_channel_create(channel: discord.abc.GuildChannel):
+    await log_action(channel.guild, f"📢 Kênh mới tạo: {channel.mention}", color=discord.Color.green())
+
+@bot.event
+async def on_guild_channel_delete(channel: discord.abc.GuildChannel):
+    await log_action(channel.guild, f"🗑️ Kênh bị xóa: {channel.name}", color=discord.Color.red())
+
+@bot.event
+async def on_guild_channel_update(before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
+    if before.name != after.name:
+        await log_action(after.guild, f"✏️ Kênh đổi tên: `{before.name}` → `{after.name}`", color=discord.Color.yellow())
+
+# Role
+@bot.event
+async def on_guild_role_create(role: discord.Role):
+    await log_action(role.guild, f"🎭 Role mới tạo: {role.name}", color=discord.Color.green())
+
+@bot.event
+async def on_guild_role_delete(role: discord.Role):
+    await log_action(role.guild, f"❌ Role bị xóa: {role.name}", color=discord.Color.red())
+
+@bot.event
+async def on_guild_role_update(before: discord.Role, after: discord.Role):
+    if before.name != after.name:
+        await log_action(after.guild, f"✏️ Role đổi tên: `{before.name}` → `{after.name}`", color=discord.Color.yellow())
+
+# Tin nhắn
+@bot.event
+async def on_message_delete(message: discord.Message):
+    if message.guild and not message.author.bot:
+        await log_action(
+            message.guild,
+            f"🗑️ Tin nhắn bị xóa ở #{message.channel.name}\n**Nội dung:** {message.content}",
+            user=message.author,
+            color=discord.Color.red()
+        )
+
+@bot.event
+async def on_message_edit(before: discord.Message, after: discord.Message):
+    if before.guild and not before.author.bot and before.content != after.content:
+        await log_action(
+            before.guild,
+            f"✏️ Tin nhắn sửa ở #{before.channel.name}\n**Trước:** {before.content}\n**Sau:** {after.content}",
+            user=before.author,
+            color=discord.Color.yellow()
+        )
+
 
 # =====================
 # ON READY
