@@ -417,41 +417,21 @@ async def kick(ctx, member: discord.Member, *, reason: str = "No reason provided
         await ctx.send(f"❌ Could not kick: {e}")
 
 
-
 # Lệnh ban
-@bot.command(name="ban")
+@bot.command()
 @commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, duration: str = None, *, reason: str = "Không có lý do"):
+async def ban(ctx, member: discord.Member, *, reason: str = "Không có lý do"):
     try:
-        if duration:
-            delta = parse_time(duration)
-            if not delta:
-                return await ctx.send("❌ Sai định dạng thời gian! Dùng: 10s, 5m, 2h, 1d")
-            await member.ban(reason=reason)
-
-            embed = discord.Embed(
-                description=f"{member.mention} đã bị ban trong **{duration}**\n**Lý do:** {reason}",
-                colour=discord.Colour.from_rgb(255, 255, 255)  # màu trắng
-            )
-            embed.set_footer(text=f"Người thực hiện: {ctx.author}", icon_url=ctx.author.display_avatar.url)
-            await ctx.send(embed=embed)
-
-            # Gỡ ban sau thời gian chỉ định
-            await discord.utils.sleep_until(discord.utils.utcnow() + delta)
-            await ctx.guild.unban(member, reason="Hết thời gian ban")
-
-        else:
-            await member.ban(reason=reason)
-            embed = discord.Embed(
-                title="⛔ Thành viên bị ban",
-                description=f"{member.mention} đã bị ban **vĩnh viễn**\n**Lý do:** {reason}",
-                colour=discord.Colour.from_rgb(255, 255, 255)
-            )
-            embed.set_footer(text=f"Người thực hiện: {ctx.author}", icon_url=ctx.author.display_avatar.url)
-            await ctx.send(embed=embed)
-
+        await member.ban(reason=reason)
+        embed = discord.Embed(
+            description=f"{member.mention} đã bị ban\n**Lý do:** {reason}",
+            colour=discord.Colour.from_rgb(255, 255, 255)
+        )
+        embed.set_footer(text=f"Người thực hiện: {ctx.author}", icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
     except Exception as e:
         await ctx.send(f"❌ Không thể ban: {e}")
+
 
 
 
@@ -484,37 +464,9 @@ async def clear(ctx, amount: int = 5):
 
 # -------------------- Mute --------------------
 
-async def ensure_muted_role(guild: discord.Guild):
-    role = discord.utils.get(guild.roles, name="Muted")
-    if role is None:
-        role = await guild.create_role(name="Muted", reason="Needed for muting members")
-        for ch in guild.channels:
-            try:
-                await ch.set_permissions(role, send_messages=False, speak=False)
-            except Exception:
-                pass
-    return role
    
 
-# Lệnh unmute
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def unmute(ctx, member: discord.Member, *, reason: str = "Không có lý do"):
-    try:
-        await member.edit(communication_disabled_until=None, reason=reason)
-
-        embed = discord.Embed(
-            description=f"{member.mention} đã được gỡ mute\n**Lý do:** {reason}",
-            colour=discord.Colour.from_rgb(255, 255, 255)  # màu trắng
-        )
-    
-        await ctx.send(embed=embed)
-
-    except Exception as e:
-        await ctx.send(f"❌ Không thể unmute: {e}")
-        
-
-    
+# Lệnh mute
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "Không có lý do"):
@@ -524,12 +476,33 @@ async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "Kh�
     until = discord.utils.utcnow() + delta
     try:
         await member.edit(communication_disabled_until=until, reason=reason)
-        await ctx.send(f"✅ Đã mute {member.mention} trong {duration} | Lý do: {reason}")
+        embed = discord.Embed(
+            description=f"{member.mention} đã bị mute trong **{duration}**\n**Lý do:** {reason}",
+            colour=discord.Colour.from_rgb(255, 255, 255)
+        )
+        embed.set_footer(text=f"Người thực hiện: {ctx.author}", icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
     except Exception as e:
-        await ctx.send(f"❌ Không thể mute: {e}")        
-        await log_action(ctx.guild, f"{ctx.author} unmuted {member}")
-    else:
-        await ctx.send("User is not muted")
+        await ctx.send(f"❌ Không thể mute: {e}")
+
+
+
+    
+# Lệnh unmute
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def unmute(ctx, member: discord.Member, *, reason: str = "Không có lý do"):
+    try:
+        await member.edit(communication_disabled_until=None, reason=reason)
+        embed = discord.Embed(
+            description=f"{member.mention} đã được gỡ mute\n**Lý do:** {reason}",
+            colour=discord.Colour.from_rgb(255, 255, 255)
+        )
+        embed.set_footer(text=f"Người thực hiện: {ctx.author}", icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
+    except Exception as e:
+        await ctx.send(f"❌ Không thể unmute: {e}")
+        
 
 
 # -------------------- Warns --------------------
