@@ -494,18 +494,25 @@ async def ensure_muted_role(guild: discord.Guild):
             except Exception:
                 pass
     return role
+   
 
+# Lệnh unmute
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def unmute(ctx, member: discord.Member, *, reason: str = "Không có lý do"):
+    try:
+        await member.edit(communication_disabled_until=None, reason=reason)
 
+        embed = discord.Embed(
+            description=f"{member.mention} đã được gỡ mute\n**Lý do:** {reason}",
+            colour=discord.Colour.from_rgb(255, 255, 255)  # màu trắng
+        )
+    
+        await ctx.send(embed=embed)
 
+    except Exception as e:
+        await ctx.send(f"❌ Không thể unmute: {e}")
         
-        
-
-@bot.command(name="unmute")
-@commands.has_permissions(manage_roles=True)
-async def unmute(ctx, member: discord.Member):
-    role = discord.utils.get(ctx.guild.roles, name="Muted")
-    if role in member.roles:
-        await member.remove_roles(role)
 
     
 @bot.command()
