@@ -496,25 +496,7 @@ async def ensure_muted_role(guild: discord.Guild):
     return role
 
 
-# Lệnh mute
-@bot.command(name="mute")
-@commands.has_permissions(moderate_members=True)
-async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "Không có lý do"):
-    delta = parse_time(duration)
-    if not delta:
-        return await ctx.send("❌ Sai định dạng thời gian! Dùng: 10s, 5m, 2h, 1d")
-    until = discord.utils.utcnow() + delta
-    try:
-        await member.edit(timeout=until, reason=reason)
 
-        embed = discord.Embed(
-            description=f"thằng ngu {member.mention} đã bị mute trong **{duration}**\n**Lý do:** {reason}",
-            colour=discord.Colour.from_rgb(255, 255, 255)  # màu trắng
-        )
-        embed.set_footer(text=f"Người thực hiện: {ctx.author}", icon_url=ctx.author.display_avatar.url)
-        await ctx.send(embed=embed)
-    except Exception as e:
-        await ctx.send(f"❌ Không thể mute: {e}")
         
         
 
@@ -524,7 +506,20 @@ async def unmute(ctx, member: discord.Member):
     role = discord.utils.get(ctx.guild.roles, name="Muted")
     if role in member.roles:
         await member.remove_roles(role)
-        await ctx.send(f"🔊 Unmuted {member}")
+
+    
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "Không có lý do"):
+    delta = parse_time(duration)
+    if not delta:
+        return await ctx.send("❌ Sai định dạng thời gian! Dùng: 10s, 5m, 2h, 1d")
+    until = discord.utils.utcnow() + delta
+    try:
+        await member.edit(communication_disabled_until=until, reason=reason)
+        await ctx.send(f"✅ Đã mute {member.mention} trong {duration} | Lý do: {reason}")
+    except Exception as e:
+        await ctx.send(f"❌ Không thể mute: {e}")        
         await log_action(ctx.guild, f"{ctx.author} unmuted {member}")
     else:
         await ctx.send("User is not muted")
