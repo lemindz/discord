@@ -375,7 +375,7 @@ async def help_cmd(ctx):
     embed.add_field(name="Moderation", value="?kick @user [lí do]\n?ban @user [thời gian]\n?unban user#1234", inline=False)
     embed.add_field(name="Utility", value="?clear <num>\n?userinfo @user\n?serverinfo", inline=False)
     embed.add_field(name="Role/Lock", value="?mute @user [thời gian]\n?unmute @user\n?lock\n?unlock", inline=False)
-    embed.add_field(name="misc", value="?av @user\n?setnick @user [tên]"
+    embed.add_field(name="misc", value="?av @user\n?setnick @user [tên]")
     embed.set_footer(text="Prefix: ?")
     await ctx.send(embed=embed)
 
