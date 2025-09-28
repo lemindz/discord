@@ -47,11 +47,13 @@ intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
 intents.message_content = True
+intents.reactions = True
 bot = commands.Bot(command_prefix="?", intents=intents, help_command=None)
 
 chat_channel_id = None
 processing_lock = asyncio.Lock()
 
+DATA_FILE = "reaction_roles.json"
 # =====================
 # MEMORY BUFFER
 # =====================
@@ -665,6 +667,115 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
     traceback.print_exception(type(error), error, error.__traceback__)
     # im lặng
     return
+
+
+# =====================
+# HÀM LƯU / TẢI DỮ LIỆU
+# =====================
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump({}, f)  # tạo file rỗng
+        return {}
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data():
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(reaction_roles, f, ensure_ascii=False, indent=4)
+
+reaction_roles = load_data()
+
+
+
+# =====================
+# 1. Slash command: reaction role đơn
+# =====================
+@bot.tree.command(name="reactionrole", description="Tạo reaction role 1 emoji - 1 role")
+@app_commands.describe(channel="Kênh để gửi tin nhắn", emoji="Emoji reaction", role="Role sẽ gán", message="Nội dung hiển thị")
+async def reactionrole(interaction: discord.Interaction, channel: discord.TextChannel, emoji: str, role: discord.Role, message: str):
+    msg = await channel.send(f"{message}\nReact {emoji} để nhận role {role.mention}")
+    await msg.add_reaction(emoji)
+
+    reaction_roles[str(msg.id)] = {emoji: role.id}
+    save_data()
+
+    await interaction.response.send_message("✅ Reaction role (1 emoji - 1 role) đã được tạo!", ephemeral=True)
+
+
+# =====================
+# 2. Slash command: reaction role nhiều emoji
+# =====================
+@bot.tree.command(name="reactionrole_multi", description="Tạo reaction role với nhiều emoji")
+@app_commands.describe(channel="Kênh để gửi tin nhắn",
+                       pairs="Nhập dạng: emoji1 @role1 , emoji2 @role2 ...",
+                       message="Nội dung hiển thị")
+async def reactionrole_multi(interaction: discord.Interaction,
+                             channel: discord.TextChannel,
+                             pairs: str,
+                             message: str):
+    """
+    Ví dụ nhập:
+    /reactionrole_multi #roles "😊 @Member , 😎 @VIP , 🎮 @Gamer" "Chọn role của bạn"
+    """
+    guild = interaction.guild
+    mapping = {}
+
+    items = [p.strip() for p in pairs.split(",")]
+    lines = []
+    for item in items:
+        try:
+            emoji, role_mention = item.split()
+            role_id = int(role_mention.strip("<@&>"))
+            role = guild.get_role(role_id)
+            if role:
+                mapping[emoji] = role.id
+                lines.append(f"{emoji} → {role.mention}")
+        except Exception:
+            return await interaction.response.send_message(f"❌ Sai định dạng: {item}", ephemeral=True)
+
+    content = f"{message}\n\n" + "\n".join(lines)
+    msg = await channel.send(content)
+
+    for emoji in mapping.keys():
+        try:
+            await msg.add_reaction(emoji)
+        except:
+            return await interaction.response.send_message(f"❌ Không thể add emoji {emoji}", ephemeral=True)
+
+    reaction_roles[str(msg.id)] = mapping
+    save_data()
+
+    await interaction.response.send_message("✅ Reaction role (multi) đã được tạo!", ephemeral=True)
+
+
+# =====================
+# Sự kiện: thêm/bỏ reaction
+# =====================
+@bot.event
+async def on_raw_reaction_add(payload):
+    if str(payload.message_id) in reaction_roles and not payload.member.bot:
+        emoji_roles = reaction_roles[str(payload.message_id)]
+        if str(payload.emoji) in emoji_roles:
+            guild = bot.get_guild(payload.guild_id)
+            role = guild.get_role(emoji_roles[str(payload.emoji)])
+            member = guild.get_member(payload.user_id)
+            if role and member:
+                await member.add_roles(role, reason="Reaction role add")
+                print(f"✅ Thêm {role.name} cho {member.display_name}")
+
+
+@bot.event
+async def on_raw_reaction_remove(payload):
+    if str(payload.message_id) in reaction_roles:
+        emoji_roles = reaction_roles[str(payload.message_id)]
+        if str(payload.emoji) in emoji_roles:
+            guild = bot.get_guild(payload.guild_id)
+            role = guild.get_role(emoji_roles[str(payload.emoji)])
+            member = guild.get_member(payload.user_id)
+            if role and member:
+                await member.remove_roles(role, reason="Reaction role remove")
+                print(f"❌ Gỡ {role.name} cho {member.display_name}")
 
 
 # =====================
