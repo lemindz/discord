@@ -419,7 +419,7 @@ async def kick(ctx, member: discord.Member, *, reason: str = "No reason provided
 
 
 # Lệnh ban
-@bot.command()
+@bot.command(name="ban")
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, duration: str = None, *, reason: str = "Không có lý do"):
     try:
@@ -471,7 +471,7 @@ async def unban(ctx, *, member: str):
     await ctx.send("❌ User not found in ban list")
 
 
-@bot.command(name="clear")
+@bot.command(name="purge")
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx, amount: int = 5):
     if amount > 100:
@@ -497,7 +497,7 @@ async def ensure_muted_role(guild: discord.Guild):
 
 
 # Lệnh mute
-@bot.command()
+@bot.command(name="mute")
 @commands.has_permissions(moderate_members=True)
 async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "Không có lý do"):
     delta = parse_time(duration)
