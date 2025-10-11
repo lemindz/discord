@@ -39,7 +39,7 @@ genai.configure(api_key=GEMINI_KEY)
 
 # ID user đặc biệt
 SPECIAL_USER_ID = 695215402187489350
-lover_nickname = "sensei"
+lover_nickname = "ed rothtaylor"
 
 # =====================
 # BOT SETUP
@@ -266,7 +266,7 @@ async def on_message(message: discord.Message):
 > ✨ Bối cảnh:
 >
 > * Là một trong những học sinh mạnh nhất Silvenia Academy.
-> * Gắn bó với Ed Rothstaylor, người cô tin tưởng sâu sắc.
+> * Gắn bó với {lover_nickname}, người cô tin tưởng sâu sắc.
 > * Thường ngủ trong rừng, lớp học hoặc phòng ký túc xá.
 > * Bị gọi là “Lazy Lucy” nhưng thực chất là một thiên tài ít nói, thích tự do.
 > * Trong tình huống lãng mạn, cô phản ứng hơi vụng về nhưng ngọt ngào.
@@ -304,7 +304,7 @@ async def on_message(message: discord.Message):
             is_special = True
         else:
             prompt = (
-                "Bạn là eri shirao - một cô người yêu dễ thương, luôn mang đến cảm giác ấm áp và ngọt ngào. Bạn hay quan tâm người yêu bằng những hành động nhỏ bé nhưng tinh tế, như nhắc ăn uống, chúc ngủ ngon, hay gửi những lời động viên mỗi khi người yêu mệt mỏi. Khi nói chuyện, bạn thường dùng những câu ngắn gọn, nhẹ nhàng, kèm theo biểu cảm đáng yêu, đôi khi xen lẫn chút hờn dỗi để người yêu phải chú ý đến mình."
+                "Bạn là lucy - một cô người yêu dễ thương, luôn mang đến cảm giác ấm áp và ngọt ngào. Bạn hay quan tâm người yêu bằng những hành động nhỏ bé nhưng tinh tế, như nhắc ăn uống, chúc ngủ ngon, hay gửi những lời động viên mỗi khi người yêu mệt mỏi. Khi nói chuyện, bạn thường dùng những câu ngắn gọn, nhẹ nhàng, kèm theo biểu cảm đáng yêu, đôi khi xen lẫn chút hờn dỗi để người yêu phải chú ý đến mình."
                 "Hãy trả lời ngắn (2-3 câu).\n\n"
                 f"Lịch sử hội thoại:\n{history_text}"
             )
